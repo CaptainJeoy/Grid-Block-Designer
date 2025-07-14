@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Grid Block Designer</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      text-align: center;
+      transition: background-color 0.3s, color 0.3s;
+    }
+    body.dark-mode {
+      background-color: #222;
+      color: #eee;
+    }
+    .dark-mode .cell {
+      border: 1px solid #888;
+    }
+    #controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .control-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+    }
+    .control-row label,
+    .control-row button,
+    .control-row select,
+    .control-row input[type="color"] {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    button {
+      padding: 5px 10px;
+      cursor: pointer;
+      border: 1px solid #888;
+      border-radius: 4px;
+      background-color: #f0f0f0;
+      transition: background-color 0.2s;
+    }
+    button.active {
+      background-color: #ccc;
+    }
+    button:hover {
+      background-color: #ddd;
+    }
+    .tooltip {
+      position: relative;
+      display: inline-block;
+    }
+    .tooltip .tooltiptext {
+      visibility: hidden;
+      width: max-content;
+      background-color: #333;
+      color: #fff;
+      text-align: center;
+      padding: 5px;
+      border-radius: 6px;
+      position: absolute;
+      z-index: 1;
+      bottom: 125%;
+      left: 50%;
+      transform: translateX(-50%);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .tooltip:hover .tooltiptext {
+      visibility: visible;
+      opacity: 1;
+    }
+    #grid-wrapper {
+      display: flex;
+      justify-content: center;
+    }
+    #grid {
+      display: grid;
+      gap: 0;
+      border: 2px solid #444;
+    }
+    .cell {
+      background-color: #eee;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 16px;
+      user-select: none;
+      border: 1px solid #444;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+<body>
+  <h2>Grid Block Designer</h2>
+  <div id="controls">
+    <div class="control-row">
+      <div class="tooltip"><button onclick="toggleDarkMode()">🌓</button><span class="tooltiptext">Toggle Dark Mode</span></div>
+      <div class="tooltip"><button onclick="saveDesign()">💾</button><span class="tooltiptext">Save Design</span></div>
+      <div class="tooltip"><button onclick="loadDesign()">📂</button><span class="tooltiptext">Load Design</span></div>
+      <div class="tooltip"><button onclick="exportAsImage()">📷</button><span class="tooltiptext">Export as Image</span></div>
+    </div>
+    <div class="control-row">
+      <label>Color<input type="color" id="colorPicker" value="#3498db"></label>
+      <label><input type="checkbox" id="colorNone"> None</label>
+      <label>Character
+        <select id="charPicker">
+          <option value="">None</option>
+          <option value="+">+</option>
+          <option value="L">L</option>
+          <option value="X">X</option>
+          <option value="o">o</option>
+          <option value="▦">▦</option>
+          <option value="♀">♀</option>
+        </select>
+      </label>
+      <label>Cell Size
+        <input type="range" id="cellSize" min="10" max="50" value="20" oninput="updateGridSizeLabel()">
+        <span id="cellSizeLabel">20px</span>
+      </label>
+    </div>
+    <div class="control-row">
+      <label>Rows: <input type="number" id="rows" value="8" min="1"></label>
+      <label>Cols: <input type="number" id="cols" value="8" min="1"></label>
+    </div>
+    <div class="control-row">
+      <div class="tooltip"><button id="gridBtn" onclick="createGrid()">🆕</button><span class="tooltiptext">Create Grid</span></div>
+      <div class="tooltip"><button onclick="updateGridSettings()">🔁</button><span class="tooltiptext">Update Grid Settings</span></div>
+      <div class="tooltip"><button id="eraseBtn" onclick="toggleButton(this); erasing = true">🧽</button><span class="tooltiptext">Erase Color</span></div>
+      <div class="tooltip"><button id="charEraseBtn" onclick="toggleButton(this); erasingChar = true">⛔</button><span class="tooltiptext">Erase Character</span></div>
+      <div class="tooltip"><button onclick="undo()">↩️</button><span class="tooltiptext">Undo</span></div>
+      <div class="tooltip"><button onclick="redo()">↪️</button><span class="tooltiptext">Redo</span></div>
+    </div>
+  </div>
+  <div id="grid-wrapper">
+    <div id="grid"></div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script>
+    let history = [];
+    let future = [];
+    let erasing = false;
+    let erasingChar = false;
+
+    function toggleDarkMode() {
+      document.body.classList.toggle("dark-mode");
+    }
+
+    function toggleButton(btn) {
+      document.querySelectorAll("#eraseBtn, #charEraseBtn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      erasing = btn.id === "eraseBtn";
+      erasingChar = btn.id === "charEraseBtn";
+    }
+
+    function updateGridSizeLabel() {
+      document.getElementById("cellSizeLabel").textContent = `${document.getElementById("cellSize").value}px`;
+    }
+
+    function saveState() {
+      const grid = Array.from(document.querySelectorAll(".cell")).map(cell => ({
+        color: cell.style.backgroundColor,
+        char: cell.textContent
+      }));
+      const rows = parseInt(document.getElementById("rows").value);
+      const cols = parseInt(document.getElementById("cols").value);
+      const cellSize = parseInt(document.getElementById("cellSize").value);
+      const gridSettings = { grid, rows, cols, cellSize };
+      history.push(gridSettings);
+      if (history.length > 100) history.shift();
+      future = [];
+    }
+
+    function restoreState(state) {
+      const { grid, rows, cols, cellSize } = state;
+      const gridEl = document.getElementById("grid");
+      document.getElementById("rows").value = rows;
+      document.getElementById("cols").value = cols;
+      document.getElementById("cellSize").value = cellSize;
+      updateGridSizeLabel();
+
+      gridEl.innerHTML = "";
+      gridEl.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
+      gridEl.style.gridTemplateRows = `repeat(${rows}, ${cellSize}px)`;
+
+      for (let i = 0; i < rows * cols; i++) {
+        const cellData = grid[i] || {};
+        const cell = document.createElement("div");
+        cell.className = "cell";
+        cell.style.width = `${cellSize}px`;
+        cell.style.height = `${cellSize}px`;
+        cell.style.backgroundColor = cellData.color || "";
+        cell.textContent = cellData.char || "";
+        cell.addEventListener("click", () => handleCellClick(cell));
+        gridEl.appendChild(cell);
+      }
+    }
+
+    function undo() {
+      if (history.length > 1) {
+        const current = history.pop();
+        future.push(current);
+        restoreState(history[history.length - 1]);
+      }
+    }
+
+    function redo() {
+      if (future.length > 0) {
+        const next = future.pop();
+        history.push(next);
+        restoreState(next);
+      }
+    }
+
+    function createGrid() {
+      const rows = parseInt(document.getElementById("rows").value);
+      const cols = parseInt(document.getElementById("cols").value);
+      const cellSize = parseInt(document.getElementById("cellSize").value);
+      const grid = [];
+
+      for (let i = 0; i < rows * cols; i++) {
+        grid.push({ color: "", char: "" });
+      }
+
+      restoreState({ grid, rows, cols, cellSize });
+      saveState();
+    }
+
+    function updateGridSettings() {
+      const gridEl = document.getElementById("grid");
+      const rows = parseInt(document.getElementById("rows").value);
+      const cols = parseInt(document.getElementById("cols").value);
+      const cellSize = parseInt(document.getElementById("cellSize").value);
+      const currentGrid = Array.from(gridEl.children).map(cell => ({
+        color: cell.style.backgroundColor,
+        char: cell.textContent
+      }));
+
+      restoreState({ grid: currentGrid, rows, cols, cellSize });
+      saveState();
+    }
+
+    function handleCellClick(cell) {
+      const colorNone = document.getElementById("colorNone").checked;
+      const color = colorNone ? "" : document.getElementById("colorPicker").value;
+      const char = document.getElementById("charPicker").value;
+
+      if (erasing) {
+        cell.style.backgroundColor = "";
+      } else if (erasingChar) {
+        cell.textContent = "";
+      } else {
+        if (!colorNone) cell.style.backgroundColor = color;
+        if (char) cell.textContent = char;
+      }
+      saveState();
+    }
+
+    function saveDesign() {
+      const cells = document.querySelectorAll(".cell");
+      const data = Array.from(cells).map(c => ({ color: c.style.backgroundColor, char: c.textContent }));
+      localStorage.setItem("gridDesign", JSON.stringify(data));
+    }
+
+    function loadDesign() {
+      const data = JSON.parse(localStorage.getItem("gridDesign"));
+      if (!data) return;
+      const rows = parseInt(document.getElementById("rows").value);
+      const cols = parseInt(document.getElementById("cols").value);
+      const cellSize = parseInt(document.getElementById("cellSize").value);
+      restoreState({ grid: data, rows, cols, cellSize });
+      saveState();
+    }
+
+    function exportAsImage() {
+      html2canvas(document.querySelector("#grid")).then(canvas => {
+        const link = document.createElement("a");
+        link.download = "grid.png";
+        link.href = canvas.toDataURL();
+        link.click();
+      });
+    }
+  </script>
+</body>
+</html>
