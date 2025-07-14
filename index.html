@@ -1,155 +1,143 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Grid Block Designer</title>
   <style>
     body {
       font-family: sans-serif;
-      padding: 20px;
-      text-align: center;
-      transition: background-color 0.3s, color 0.3s;
+      margin: 0;
+      padding: 0;
     }
-    body.dark-mode {
-      background-color: #222;
-      color: #eee;
+
+    .dark-mode {
+      background: #1c1c1c;
+      color: white;
     }
-    .dark-mode .cell {
-      border: 1px solid #888;
-    }
-    #controls {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-    .control-row {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 10px;
-    }
-    .control-row label,
-    .control-row button,
-    .control-row select,
-    .control-row input[type="color"] {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    button {
-      padding: 5px 10px;
-      cursor: pointer;
-      border: 1px solid #888;
-      border-radius: 4px;
-      background-color: #f0f0f0;
-      transition: background-color 0.2s;
-    }
-    button.active {
-      background-color: #ccc;
-    }
-    button:hover {
-      background-color: #ddd;
-    }
-    .tooltip {
-      position: relative;
-      display: inline-block;
-    }
-    .tooltip .tooltiptext {
-      visibility: hidden;
-      width: max-content;
-      background-color: #333;
-      color: #fff;
-      text-align: center;
-      padding: 5px;
-      border-radius: 6px;
-      position: absolute;
-      z-index: 1;
-      bottom: 125%;
-      left: 50%;
-      transform: translateX(-50%);
-      opacity: 0;
-      transition: opacity 0.3s;
-    }
-    .tooltip:hover .tooltiptext {
-      visibility: visible;
-      opacity: 1;
-    }
-    #grid-wrapper {
-      display: flex;
-      justify-content: center;
-    }
+
     #grid {
       display: grid;
-      gap: 0;
-      border: 2px solid #444;
+      margin: 20px auto;
+      border: 2px solid #aaa;
+      gap: 1px;
+      background-color: #aaa;
+      width: fit-content;
     }
+
     .cell {
-      background-color: #eee;
+      background: white;
+      border: 1px solid #ccc;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 18px;
+      user-select: none;
       cursor: pointer;
+    }
+
+    #controls {
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    button, select, input[type="color"], input[type="number"], input[type="range"] {
+      padding: 5px 10px;
+      font-size: 14px;
+    }
+
+    button.active {
+      background: orange;
+      color: white;
+    }
+
+    #toolIndicator {
+      font-weight: bold;
+      font-size: 14px;
+      margin-top: 5px;
+    }
+
+    label {
       display: flex;
       align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      font-size: 16px;
-      user-select: none;
-      border: 1px solid #444;
-      box-sizing: border-box;
+      gap: 5px;
     }
   </style>
 </head>
 <body>
-  <h2>Grid Block Designer</h2>
   <div id="controls">
-    <div class="control-row">
-      <div class="tooltip"><button onclick="toggleDarkMode()">🌓</button><span class="tooltiptext">Toggle Dark Mode</span></div>
-      <div class="tooltip"><button onclick="saveDesign()">💾</button><span class="tooltiptext">Save Design</span></div>
-      <div class="tooltip"><button onclick="loadDesign()">📂</button><span class="tooltiptext">Load Design</span></div>
-      <div class="tooltip"><button onclick="exportAsImage()">📷</button><span class="tooltiptext">Export as Image</span></div>
+    <!-- Layer 1 -->
+    <div class="row">
+      <button onclick="saveDesign()" title="Save current design">💾 Save</button>
+      <button onclick="loadDesign()" title="Load saved design">📂 Load</button>
+      <button onclick="exportAsImage()" title="Export grid as image">🖼️ Export</button>
+      <button onclick="toggleDarkMode()" title="Toggle dark mode">🌙 Dark</button>
     </div>
-    <div class="control-row">
-      <label>Color<input type="color" id="colorPicker" value="#3498db"></label>
+
+    <!-- Layer 2 -->
+    <div class="row">
+      <label><input type="color" id="colorPicker" value="#ff0000"></label>
       <label><input type="checkbox" id="colorNone"> None</label>
-      <label>Character
-        <select id="charPicker">
-          <option value="">None</option>
-          <option value="+">+</option>
-          <option value="L">L</option>
-          <option value="X">X</option>
-          <option value="o">o</option>
-          <option value="▦">▦</option>
-          <option value="♀">♀</option>
-        </select>
-      </label>
-      <label>Cell Size
-        <input type="range" id="cellSize" min="10" max="50" value="20" oninput="updateGridSizeLabel()">
-        <span id="cellSizeLabel">20px</span>
-      </label>
+      <select id="charPicker" title="Select character to place">
+        <option value="">-- Char --</option>
+        <option value="+">+</option>
+        <option value="L">L</option>
+        <option value="X">X</option>
+        <option value="o">o</option>
+        <option value="▦">▦</option>
+        <option value="♀">♀</option>
+      </select>
+      <label>Size <input type="range" id="cellSize" min="10" max="60" value="30" oninput="updateGridSizeLabel()">
+        <span id="cellSizeLabel">30px</span></label>
     </div>
-    <div class="control-row">
-      <label>Rows: <input type="number" id="rows" value="8" min="1"></label>
-      <label>Cols: <input type="number" id="cols" value="8" min="1"></label>
+
+    <!-- Layer 3 -->
+    <div class="row">
+      <label>Rows <input type="number" id="rows" value="8" min="1"></label>
+      <label>Cols <input type="number" id="cols" value="8" min="1"></label>
     </div>
-    <div class="control-row">
-      <div class="tooltip"><button id="gridBtn" onclick="createGrid()">🆕</button><span class="tooltiptext">Create Grid</span></div>
-      <div class="tooltip"><button onclick="updateGridSettings()">🔁</button><span class="tooltiptext">Update Grid Settings</span></div>
-      <div class="tooltip"><button id="eraseBtn" onclick="toggleButton(this); erasing = true">🧽</button><span class="tooltiptext">Erase Color</span></div>
-      <div class="tooltip"><button id="charEraseBtn" onclick="toggleButton(this); erasingChar = true">⛔</button><span class="tooltiptext">Erase Character</span></div>
-      <div class="tooltip"><button onclick="undo()">↩️</button><span class="tooltiptext">Undo</span></div>
-      <div class="tooltip"><button onclick="redo()">↪️</button><span class="tooltiptext">Redo</span></div>
+
+    <!-- Layer 4 -->
+    <div class="row">
+      <button onclick="createGrid()" title="Create new grid (clears current)">🆕 New Grid</button>
+      <button onclick="updateGridSettings()" title="Update grid without clearing">🔄 Update Grid</button>
+      <button onclick="undo()" title="Undo last action">↩️ Undo</button>
+      <button onclick="redo()" title="Redo last action">↪️ Redo</button>
+      <button id="eraseBtn" onclick="toggleButton(this)" title="Toggle erase cell color">🧽 Erase</button>
+      <button id="charEraseBtn" onclick="toggleButton(this)" title="Toggle erase character">⛔ Erase Char</button>
     </div>
-  </div>
-  <div id="grid-wrapper">
-    <div id="grid"></div>
+
+    <div id="toolIndicator">Active Tool: 🖌️ Paint</div>
   </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <div id="grid"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script>
     let history = [];
     let future = [];
     let erasing = false;
     let erasingChar = false;
+    let toolState = null;
+
+    function updateToolIndicator() {
+      const toolIndicator = document.getElementById("toolIndicator");
+      let label = "Active Tool: ";
+      if (toolState === "colorErase") label += "🧽 Erase Color";
+      else if (toolState === "charErase") label += "⛔ Erase Character";
+      else label += "🖌️ Paint";
+      toolIndicator.textContent = label;
+    }
 
     function toggleDarkMode() {
       document.body.classList.toggle("dark-mode");
@@ -157,9 +145,30 @@
 
     function toggleButton(btn) {
       document.querySelectorAll("#eraseBtn, #charEraseBtn").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      erasing = btn.id === "eraseBtn";
-      erasingChar = btn.id === "charEraseBtn";
+      const id = btn.id;
+      if ((id === "eraseBtn" && toolState === 'colorErase') || (id === "charEraseBtn" && toolState === 'charErase')) {
+        resetToolState();
+      } else {
+        btn.classList.add("active");
+        if (id === "eraseBtn") {
+          erasing = true;
+          erasingChar = false;
+          toolState = 'colorErase';
+        } else {
+          erasingChar = true;
+          erasing = false;
+          toolState = 'charErase';
+        }
+      }
+      updateToolIndicator();
+    }
+
+    function resetToolState() {
+      erasing = false;
+      erasingChar = false;
+      toolState = null;
+      document.querySelectorAll("#eraseBtn, #charEraseBtn").forEach(b => b.classList.remove("active"));
+      updateToolIndicator();
     }
 
     function updateGridSizeLabel() {
@@ -174,14 +183,15 @@
       const rows = parseInt(document.getElementById("rows").value);
       const cols = parseInt(document.getElementById("cols").value);
       const cellSize = parseInt(document.getElementById("cellSize").value);
-      const gridSettings = { grid, rows, cols, cellSize };
+      const tool = toolState;
+      const gridSettings = { grid, rows, cols, cellSize, tool };
       history.push(gridSettings);
       if (history.length > 100) history.shift();
       future = [];
     }
 
     function restoreState(state) {
-      const { grid, rows, cols, cellSize } = state;
+      const { grid, rows, cols, cellSize, tool } = state;
       const gridEl = document.getElementById("grid");
       document.getElementById("rows").value = rows;
       document.getElementById("cols").value = cols;
@@ -203,6 +213,10 @@
         cell.addEventListener("click", () => handleCellClick(cell));
         gridEl.appendChild(cell);
       }
+
+      resetToolState();
+      if (tool === 'colorErase') toggleButton(document.getElementById("eraseBtn"));
+      else if (tool === 'charErase') toggleButton(document.getElementById("charEraseBtn"));
     }
 
     function undo() {
@@ -226,12 +240,10 @@
       const cols = parseInt(document.getElementById("cols").value);
       const cellSize = parseInt(document.getElementById("cellSize").value);
       const grid = [];
-
       for (let i = 0; i < rows * cols; i++) {
         grid.push({ color: "", char: "" });
       }
-
-      restoreState({ grid, rows, cols, cellSize });
+      restoreState({ grid, rows, cols, cellSize, tool: null });
       saveState();
     }
 
@@ -244,8 +256,7 @@
         color: cell.style.backgroundColor,
         char: cell.textContent
       }));
-
-      restoreState({ grid: currentGrid, rows, cols, cellSize });
+      restoreState({ grid: currentGrid, rows, cols, cellSize, tool: toolState });
       saveState();
     }
 
@@ -277,7 +288,7 @@
       const rows = parseInt(document.getElementById("rows").value);
       const cols = parseInt(document.getElementById("cols").value);
       const cellSize = parseInt(document.getElementById("cellSize").value);
-      restoreState({ grid: data, rows, cols, cellSize });
+      restoreState({ grid: data, rows, cols, cellSize, tool: toolState });
       saveState();
     }
 
@@ -289,6 +300,17 @@
         link.click();
       });
     }
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "e") toggleButton(document.getElementById("eraseBtn"));
+      if (e.key === "x") toggleButton(document.getElementById("charEraseBtn"));
+      if (e.key === "p") resetToolState();
+    });
+
+    window.addEventListener("DOMContentLoaded", () => {
+      updateGridSizeLabel();
+      createGrid();
+    });
   </script>
 </body>
 </html>
