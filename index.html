@@ -114,19 +114,19 @@
   </div>
 
   <div class="toolbar">
-    <button id="undo">Undo (Ctrl+Z)</button>
-    <button id="redo">Redo (Ctrl+Y)</button>
-    <button id="save">Save</button>
-    <button id="load">Load</button>
-    <button id="darkMode">Dark Mode</button>
-  </div>
-
-<div class="toolbar">
     <button id="paintTool">Paint (P)</button>
     <button id="eraseTool">Erase (E)</button>
     <button id="charTool">Char (C)</button>
     <input type="color" id="colorPicker" value="#ff0000"/>
     <input type="text" id="charInput" maxlength="1" placeholder="A"/>
+  </div>
+
+  <div class="toolbar">
+    <button id="undo">Undo (Ctrl+Z)</button>
+    <button id="redo">Redo (Ctrl+Y)</button>
+    <button id="save">Save</button>
+    <button id="load">Load</button>
+    <button id="darkMode">Dark Mode</button>
   </div>
 
   <div id="grid" class="grid"></div>
@@ -157,6 +157,11 @@
     let rows = parseInt(rowsInput.value);
     let cols = parseInt(colsInput.value);
     let cellSize = parseInt(cellSizeInput.value);
+
+    // NEW: remember previous grid dimensions so we can resize correctly
+    let prevRows = rows;
+    let prevCols = cols;
+
     let tool = "paint";
     let grid = [];
     let undoStack = [];
@@ -176,7 +181,27 @@
       if (reset) {
         grid = Array(rows * cols).fill().map(() => ({}));
         saveState();
+      } else {
+        // resize grid while preserving old data
+        const newGrid = Array(rows * cols).fill().map(() => ({}));
+        const copyRows = Math.min(rows, prevRows);
+        const copyCols = Math.min(cols, prevCols);
+        for (let r = 0; r < copyRows; r++) {
+          for (let c = 0; c < copyCols; c++) {
+            const oldIndex = r * prevCols + c;
+            const newIndex = r * cols + c;
+            if (grid[oldIndex]) {
+              // copy the object so we don't accidentally link references
+              newGrid[newIndex] = Object.assign({}, grid[oldIndex]);
+            }
+          }
+        }
+        grid = newGrid;
+        saveState();
       }
+      // update prev dims so future updates map correctly
+      prevRows = rows;
+      prevCols = cols;
       renderGrid();
     }
 
@@ -225,11 +250,14 @@
     function handleCellClick(cell, index) {
       saveState();
       if (tool === "paint") {
+        // ensure grid[index] exists
+        if (!grid[index]) grid[index] = {};
         grid[index].color = colorPicker.value;
         grid[index].char = "";
       } else if (tool === "erase") {
         grid[index] = {};
       } else if (tool === "char") {
+        if (!grid[index]) grid[index] = {};
         grid[index].char = charInput.value;
         grid[index].color = "";
       }
@@ -255,6 +283,9 @@
     };
 
     updateGridBtn.onclick = () => {
+      // capture previous dims before overwriting globals
+      prevRows = rows;
+      prevCols = cols;
       rows = parseInt(rowsInput.value);
       cols = parseInt(colsInput.value);
       cellSize = parseInt(cellSizeInput.value);
